@@ -3,9 +3,11 @@ library(dplyr)
 library(tmap)
 library(here)
 
+# Fetch vectors for Russia
 russia <- geodata::gadm("Russia", path = here::here("data"), level = 2)
 russia <- st_as_sf(russia)
 
+# Extract Moscow
 moscow <- russia |>
   filter(NAME_1 == "Moscow City") |>
   st_transform(crs = 32637)
@@ -13,10 +15,14 @@ moscow <- russia |>
 moscow |>
   qtm()
 
+# Generate a grid of point for Moscow
 grid <- st_make_grid(moscow, cellsize = 500, what = "centers")
 grid <- grid[moscow]
 
-# tmap_mode("plot")
+centroid <- moscow |>
+  st_geometry() |>
+  st_union() |>
+  st_centroid()
 
 tm_shape(moscow) +
   tm_polygons() +
@@ -26,12 +32,38 @@ tm_shape(moscow) +
   tm_symbols(size = 0.01) +
   tm_scale_bar()
 
-centroid <- moscow |>
+# Transform to WGS84 and export
+grid |>
+  st_transform(crs = 4326) |>
+  write_sf(here("data", "shp", "moscow_grid.shp"))
+
+
+# Extract Saint Petersburg
+st_petersburg <- russia |>
+  filter(NAME_1 == "City of St. Petersburg") |>
+  st_transform(crs = 32637)
+
+st_petersburg |>
+  qtm()
+
+# Generate a grid of point for Moscow
+grid <- st_make_grid(st_petersburg, cellsize = 500, what = "centers")
+grid <- grid[st_petersburg]
+
+centroid <- st_petersburg |>
   st_geometry() |>
   st_union() |>
   st_centroid()
 
-# transform to WGS84 and export
+tm_shape(st_petersburg) +
+  tm_polygons() +
+  tm_shape(centroid) +
+  tm_symbols(col = "red", size = 0.5) +
+  tm_shape(grid) +
+  tm_symbols(size = 0.01) +
+  tm_scale_bar()
+
+# Transform to WGS84 and export
 grid |>
   st_transform(crs = 4326) |>
-  write_sf(here("data", "shp", "moscow_grid.shp"))
+  write_sf(here("data", "shp", "st_petersburg_grid.shp"))
