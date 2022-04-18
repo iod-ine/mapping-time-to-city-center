@@ -1,26 +1,9 @@
 import time
 
-import fiona
-import geopandas as gpd
-
 import selenium
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
-
-
-# Use Zaryadye Park as a symbolic center of Moscow
-zaryadye_park = "55.749435, 37.629416"
-
-# Load the point grid: reload an interrupted attempt if possible
-try:
-    grid = gpd.read_file("data/shp/moscow_times.shp")
-except fiona.errors.DriverError:
-    grid = gpd.read_file("data/shp/moscow_grid.shp")
-
-    # Add a column to store the extracted times
-    grid["best_time"] = str()
 
 # Configure Yandex Maps specific class names
 route_button = "route-control__inner"
@@ -29,12 +12,13 @@ result = "masstransit-route-snippet-view__route-duration"
 no_route_error = "route-error-view__text"
 
 
-def look_up_transit_time(from_: str, to: str) -> str:
+def look_up_transit_time(from_: str, to: str, driver) -> str:
     """Lookup transit time between to points on Yandex Maps.
 
     Args:
         from_ (str): The start point.
         to (str): The end point.
+        driver: Selenium webdriver instance.
 
     Returns:
         A string with the best time suggested by Yandex Maps.
@@ -81,27 +65,3 @@ def look_up_transit_time(from_: str, to: str) -> str:
         return "no route"
 
     return best_time
-
-
-try:
-    with webdriver.Firefox() as driver:
-        # iterate over the grid to find best time for each point
-        for i, row in grid.iterrows():
-
-            # skip already fetched times
-            if row["best_time"] is not None:
-                continue
-
-            geometry = row["geometry"]
-            point = f"{geometry.y:.6f}, {geometry.x:.6f}"
-            best_time = look_up_transit_time(point, zaryadye_park)
-
-            best_time = best_time.replace("ч", "h")
-            best_time = best_time.replace("мин", "m")
-            grid.loc[i, "best_time"] = best_time
-
-            # Be nice to the Yandex Maps server and separate the requests
-            time.sleep(3)
-
-finally:
-    grid.to_file("data/shp/moscow_times.shp", index=False)
