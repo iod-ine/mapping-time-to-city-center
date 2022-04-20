@@ -7,9 +7,14 @@ from selenium.webdriver.common.action_chains import ActionChains
 
 # Configure Yandex Maps specific class names
 route_button = "route-control__inner"
-transport_mode = "_mode_masstransit"
-result = "masstransit-route-snippet-view__route-duration"
-no_route_error = "route-error-view__text"
+
+modes = {
+    # mode: (button_class, result_class)
+    "car": ("_mode_auto", "auto-route-snippet-view__route-title-primary"),
+    "public": ("_mode_masstransit", "masstransit-route-snippet-view__route-duration"),
+    "walk": ("_mode_pedestrian", "pedestrian-route-snippet-view__route-title-primary"),
+    "cycle": ("_mode_bicycle", "bicycle-route-snippet-view__route-title-primary"),
+}
 
 
 def look_up_transit_time(from_: str, to: str, driver) -> str:
@@ -24,9 +29,6 @@ def look_up_transit_time(from_: str, to: str, driver) -> str:
         A string with the best time suggested by Yandex Maps.
 
     Notes:
-        The function expects that `driver` exists in the global scope.
-        It is meant to be run from within the Selenium webdriver context.
-
         The strings will be typed into the search fields, they can be
         coordinates or names of places. When using coordinates, note that
         Yandex Maps expects them latitude-first.
@@ -53,15 +55,19 @@ def look_up_transit_time(from_: str, to: str, driver) -> str:
     time.sleep(1)
     actions.perform()
 
-    # Activate the public transport route
+    # Go through all route modes
     time.sleep(1)
-    driver.find_element(by=By.CLASS_NAME, value=transport_mode).click()
+    times = dict()
+    for mode, (btn, res) in modes.items():
+        # Activate the corresponding mode by clicking the button
+        driver.find_element(by=By.CLASS_NAME, value=btn).click()
+        time.sleep(1.5)
 
-    # Extract the time suggested in the first result
-    time.sleep(2)
-    try:
-        best_time = driver.find_element(by=By.CLASS_NAME, value=result).text
-    except selenium.common.exceptions.NoSuchElementException:
-        return "no route"
+        try:
+            travel_time = driver.find_element(by=By.CLASS_NAME, value=res).text
+        except selenium.common.exceptions.NoSuchElementException:
+            travel_time = "no route"
 
-    return best_time
+        times[mode] = travel_time
+
+    return times

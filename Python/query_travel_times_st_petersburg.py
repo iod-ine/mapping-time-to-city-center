@@ -1,6 +1,6 @@
 import time
+import datetime
 
-import fiona
 import geopandas as gpd
 
 from selenium import webdriver
@@ -9,36 +9,37 @@ from yandex_maps_lookup import look_up_transit_time
 
 
 # Use Palace Square as a symbolic center of Saint Petersburg
-zaryadye_park = "59.938996, 30.315482"
+palace_square = "59.938996, 30.315482"
 
-# Load the point grid: reload an interrupted attempt if possible
-try:
-    grid = gpd.read_file("data/shp/st_petersburg_times.shp")
-except fiona.errors.DriverError:
-    grid = gpd.read_file("data/shp/st_petersburg_grid.shp")
-
-    # Add a column to store the extracted times
-    grid["best_time"] = str()
+# Load the point grid
+grid = gpd.read_file("data/shp/st_petersburg_grid.shp")
 
 try:
     with webdriver.Firefox() as driver:
         # iterate over the grid to find best time for each point
         for i, row in grid.iterrows():
 
+            now = datetime.datetime.now()
+            if now.hour < 8 or now.hour > 19:
+                raise ValueError(
+                    "It's either too early or too late! Results might be skewed."
+                )
+
             # skip already fetched times
-            if row["best_time"] is not None:
+            if row["date"] is not None:
                 continue
 
             geometry = row["geometry"]
             point = f"{geometry.y:.6f}, {geometry.x:.6f}"
-            best_time = look_up_transit_time(point, zaryadye_park, driver)
+            times = look_up_transit_time(point, palace_square, driver)
 
-            best_time = best_time.replace("ч", "h")
-            best_time = best_time.replace("мин", "m")
-            grid.loc[i, "best_time"] = best_time
+            for mode, time_ in times.items():
+                grid.loc[i, mode] = time_.replace("ч", "h").replace("мин", "m")
+
+            grid.loc[i, "date"] = now.isoformat()
 
             # Be nice to the Yandex Maps server and separate the requests
             time.sleep(3)
 
 finally:
-    grid.to_file("data/shp/st_petersburg_times.shp", index=False)
+    grid.to_file("data/shp/st_petersburg_grid.shp", index=False)
