@@ -1,0 +1,26 @@
+---
+title: "Untitled"
+format: html
+---
+
+```{r}
+library(sf)
+library(tmap)
+library(here)
+```
+
+```{r}
+#| label: fetch-raw-data-from-db
+library(DBI)
+
+connection <- dbConnect(
+  drv = RPostgres::Postgres(),
+  host = "localhost",
+  dbname = "projects"
+)
+
+dd <- st_read(connection, Id(schema = "time_to_center", table = "moscow_raw"))
+
+dbDisconnect(connection)
+```
+

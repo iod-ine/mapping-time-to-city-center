@@ -1,6 +1,10 @@
 data/
 .DS_Store
 
+# Rendered Quarto documents
+Quarto/*.html
+Quarto/*_files/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
