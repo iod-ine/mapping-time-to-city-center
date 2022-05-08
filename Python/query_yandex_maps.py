@@ -91,7 +91,24 @@ if __name__ == "__main__":
         help='the city to query for [i.e. "moscow"]',
     )
 
+    parser.add_argument(
+        "--time-zone",
+        type=int,
+        default=3,  # Moscow and St. Petersburg are in UTC+3
+        help="time offset from UTC [i.e. +3, -1]",
+    )
+
     args = parser.parse_args()
+
+    # Construct a timezone object to check local time
+    dime_delta = datetime.timedelta(hours=args.time_zone)
+    time_zone = datetime.timezone(offset=dime_delta)
+
+    # Check the time before starting
+    now = datetime.datetime.now(tz=time_zone)
+    print(now)
+    if now.hour < 8 or now.hour > 19:
+        raise ValueError("It's either too early or too late! Results might be skewed.")
 
     try:
         city = city_grids_and_center_coords[args.city]
@@ -103,10 +120,10 @@ if __name__ == "__main__":
 
     try:
         with webdriver.Firefox() as driver:
-            # iterate over the grid to find best time for each point
+            # Iterate over the grid to find best time for each point
             for i, row in grid.iterrows():
-
-                now = datetime.datetime.now()
+                # Check if the time is good for data collection
+                now = datetime.datetime.now(tz=time_zone)
                 if now.hour < 8 or now.hour > 19:
                     raise ValueError(
                         "It's either too early or too late! Results might be skewed."
