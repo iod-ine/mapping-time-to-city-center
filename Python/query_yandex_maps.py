@@ -12,7 +12,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 
 # Import the configuration dictionary with defined cities
-from yandex_cities_config import city_grids_and_center_coords
+from cities_config import city_grids_and_center_coords
 
 # Configure Yandex Maps specific class names
 route_button = "route-control__inner"
@@ -113,8 +113,7 @@ if __name__ == "__main__":
     try:
         city = city_grids_and_center_coords[args.city]
     except KeyError:
-        print("No such city defined in yandex_cities_config.")
-        sys.exit()
+        raise ValueError("No such city defined in cities_config.")
 
     grid = gpd.read_file(f"data/shp/{city.shp_stem}.shp")
 
